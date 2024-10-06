@@ -97,7 +97,7 @@ a:focus {
 }
 
 .sub_page .hero_area {
-  min-height: auto;
+  min-height: initial;
   border-radius: 0 0 45px 0;
 }
 
