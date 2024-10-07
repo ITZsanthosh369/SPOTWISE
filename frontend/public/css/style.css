@@ -317,7 +317,7 @@ a:focus {
 .slider_section .detail-box .btn-box .btn1 {
   display: inline-block;
   padding: 12px 15px;
-  background-color: #5a2a8f;
+  background-color: rgb(90, 42, 143);
   color: #ffffff;
   border-radius: 5px;
   -webkit-transition: all 0.3s;
