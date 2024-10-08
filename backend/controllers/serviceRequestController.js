@@ -45,6 +45,10 @@ exports.getActiveRequests = async (req, res) => {
         console.log('User Location:', location); // Add this line to debug
         console.log(skills)
         const radius = 1000; // Radius in kilometers
+         // Check provider's status
+         if (user.status === 'in-progress') {
+            return res.status(400).json({ message: 'You have an ongoing request in progress.' });
+        }
 
         // Check if location is defined
         if (!location || !location.coordinates || location.coordinates.length !== 2) {
@@ -78,13 +82,17 @@ exports.getActiveRequests = async (req, res) => {
 exports.acceptRequest = async (req, res) => {
     try {
         const requestId = req.params.id;
-
+        console.log(requestId)
+        const user = await User.findById(req.user.id).select('status')
         // Ensure the user is a provider
         if (req.user.role !== 'provider') {
             return res.status(403).json({ message: 'Only providers can accept requests' });
         }
-        console.log(req.user.id)
-        console.log(requestId)
+
+        if (user.status === 'in-progress') {
+        return res.status(400).json({ message: 'You have an active request in progress. Please complete it before accepting a new request.' });
+        }
+      
         // Find and update the request
         const request = await ServiceRequest.findById(requestId);
         if (!request) return res.status(404).json({ message: 'Service request not found' });
@@ -96,6 +104,9 @@ exports.acceptRequest = async (req, res) => {
         request.status = 'in-progress';
         request.provider = req.user.id;
         request.generatedPin = Math.floor(100000 + Math.random() * 900000); // Generate 6-digit PIN
+         
+        user.status = 'in-progress'; // Set status to in-progress
+        await user.save();
 
         await request.save();
         res.status(200).json({ message: 'Request accepted', request });
@@ -122,6 +133,10 @@ exports.completeRequest = async (req, res) => {
 
         request.status = 'completed';
         await request.save();
+        // Update provider's status
+        const user = await User.findById(req.user.id);
+        user.status = 'online'; // or 'active' based on your logic
+        await user.save();
 
         res.status(200).json({ message: 'Request completed successfully', request });
     } catch (error) {

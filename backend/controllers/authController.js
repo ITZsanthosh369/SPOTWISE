@@ -55,7 +55,7 @@ exports.register = async (req, res) => {
     }
 };
 
-// Login user
+/// Login user
 exports.login = async (req, res) => {
     // Validate incoming request
     const errors = validationResult(req);
@@ -78,6 +78,12 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Invalid Credentials' });
         }
 
+        // Set status to online for providers
+        if (user.role === 'provider') {
+            user.status = 'online';
+            await user.save(); // Save the updated status
+        }
+
         // Create JWT payload
         const payload = {
             user: {
@@ -90,7 +96,7 @@ exports.login = async (req, res) => {
         jwt.sign(
             payload,
             process.env.JWT_SECRET,
-            { expiresIn: '1h' },
+            { expiresIn: '7d' },
             (err, token) => {
                 if (err) throw err;
                 res.json({ token });
@@ -101,6 +107,26 @@ exports.login = async (req, res) => {
         res.status(500).send('Server error');
     }
 };
+
+// Logout user - This will need to be implemented in your controller
+exports.logout = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Set status to offline for providers
+        const user = await User.findById(userId);
+        if (user && user.role === 'provider') {
+            user.status = 'offline';
+            await user.save(); // Save the updated status
+        }
+
+        res.status(200).json({ message: 'User logged out successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+};
+
 
 // Get authenticated user details
 exports.getUser = async (req, res) => {

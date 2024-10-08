@@ -29,6 +29,11 @@ router.post(
     ],
     authController.login
 );
+// @route   POST /api/auth/logout
+// @desc    Logout user
+// @access  Private
+router.post('/logout', authMiddleware, authController.logout);
+
 
 // @route   GET /api/auth
 // @desc    Get authenticated user

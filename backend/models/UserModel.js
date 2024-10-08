@@ -48,6 +48,11 @@ const userSchema = new mongoose.Schema({
         type: { type: String, enum: ['Point'], default: 'Point' },
         coordinates: { type: [Number], required: function() { return this.role === 'provider'; } } // [longitude, latitude] for seeker's location
     },
+    status: {
+        type: String,
+        enum: ['offline', 'online', 'active', 'in-progress'],
+        default: 'offline', // Initial status for new providers
+    },
 }, {
     timestamps: true
 });
