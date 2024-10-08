@@ -11,6 +11,7 @@
 body {
     background: url("images/1.jpg");
     background-size: cover;
+    background-color: #7335b7;
     background-repeat: no-repeat;
     background-attachment: fixed;
     overflow: hidden;
@@ -51,7 +52,7 @@ body {
     width: 130px;
     height: 40px;
     font-weight: 500;
-    background: rgba(255, 255, 255, 0.4);
+    background: #fd7e14;
     border: none;
     border-radius: 30px;
     cursor: pointer;
@@ -59,18 +60,19 @@ body {
 }
 
 .btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: #fd7e14;
 }
 
 #registerBtn {
     margin-left: 15px;
+    background-color: #fd7e14;
 }
 
 .btn.white-btn {
-    background: rgba(255, 255, 255, 0.7);
+    background: #fff;
 }
 
-.btn.btn.white-btn:hover {
+.btn.white-btn:hover {
     background: rgba(255, 255, 255, 0.5);
 }
 
@@ -151,6 +153,33 @@ header {
     background: rgba(255, 255, 255, 0.25);
 }
 
+input[type="submit"] {
+    cursor: pointer;
+}
+
+/* Style the select dropdown */
+select.input-field {
+    appearance: none; /* Remove default arrow */
+    background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"%3E%3Cpath fill="%23ffffff" d="M7 10l5 5 5-5H7z"/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px;
+    width: 250px;
+    color: white; /* Set the text color to white */
+     /* Optional: white border */
+}
+
+/* Style the options within the dropdown */
+select.input-field option {
+    background-color: rgb(255, 255, 255); /* Set the dropdown options background color to black */
+    color: rgb(0, 0, 0); /* Set the dropdown options text color to white */
+}
+
+/* Add a hover effect for the options (optional) */
+select.input-field option:hover {
+    background-color: #000000; /* Change the background color on hover */
+}
+
 ::-webkit-input-placeholder {
     color: #fff;
 }
@@ -207,8 +236,6 @@ header {
     .nav-button {
         display: none;
     }
-
-    
 }
 
 @media only screen and (max-width: 540px) {
