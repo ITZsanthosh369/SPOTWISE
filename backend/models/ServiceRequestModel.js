@@ -29,21 +29,29 @@ requestSchema.pre('save', function(next) {
     this.expirationTime = new Date(Date.now() + this.duration * 60 * 1000); // Convert minutes to milliseconds
     next();
 });
-// Middleware to update the status to 'expired' if the current time is greater than expirationTime
-requestSchema.pre('find', function(next) {
+requestSchema.pre('find', async function(next) {
     const currentTime = new Date();
-    this.updateMany(
-        { expirationTime: { $lt: currentTime }, status: { $ne: 'expired' } }, // Only update if not already 'expired'
-        { status: 'expired' },
-        next
-    );
+    
+    try {
+        // Update all requests with an expired expirationTime
+        await this.model.updateMany(
+            { expirationTime: { $lt: currentTime }, status: { $ne: 'expired' } }, // Filter for expired requests that aren't already 'expired'
+            { status: 'expired' }
+        );
+        next();
+    } catch (error) {
+        console.error('Error updating expired requests:', error);
+        next(error); // Pass the error to the next middleware or route handler
+    }
 });
+
 
 requestSchema.pre('save', function(next) {
     // Check if the status field has been modified
     if (this.isModified('status')) {
         // Custom logic for when the status changes to 'in-progress'
         if (this.status === 'in-progress') {
+            
             this.history.push({
                 provider: this.provider || null,  // Record provider if available
                 status: 'accepted',               // Add 'accepted' to history for 'in-progress' status
@@ -65,14 +73,22 @@ requestSchema.pre('save', function(next) {
 });
 
 
-requestSchema.pre('findOne', function(next) {
+requestSchema.pre('findOne', async function(next) {
     const currentTime = new Date();
-    this.updateOne(
-        { expirationTime: { $lt: currentTime }, status: { $ne: 'expired' } }, // Only update if not already 'expired'
-        { status: 'expired' },
-        next
-    );
+    
+    try {
+        // Update a single request that may be expired
+        await this.model.updateOne(
+            { expirationTime: { $lt: currentTime }, status: { $ne: 'expired' } }, // Only update if not already 'expired'
+            { status: 'expired' }
+        );
+        next();
+    } catch (error) {
+        console.error('Error updating expired request:', error);
+        next(error); // Pass the error to the next middleware or route handler
+    }
 });
+
 
 const Request = mongoose.model('Request', requestSchema);
 

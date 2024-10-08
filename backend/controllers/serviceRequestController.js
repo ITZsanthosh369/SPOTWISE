@@ -83,6 +83,7 @@ exports.acceptRequest = async (req, res) => {
         if (req.user.role !== 'provider') {
             return res.status(403).json({ message: 'Only providers can accept requests' });
         }
+        console.log(req.user.id)
         console.log(requestId)
         // Find and update the request
         const request = await ServiceRequest.findById(requestId);
@@ -93,7 +94,7 @@ exports.acceptRequest = async (req, res) => {
         }
 
         request.status = 'in-progress';
-        request.provider = req.user._id;
+        request.provider = req.user.id;
         request.generatedPin = Math.floor(100000 + Math.random() * 900000); // Generate 6-digit PIN
 
         await request.save();
@@ -129,36 +130,37 @@ exports.completeRequest = async (req, res) => {
     }
 };
 
-// Fetch request history for a user (seeker or provider)
 exports.getRequestHistory = async (req, res) => {
     try {
-        const userId = req.user.id; // Assuming req.user contains the authenticated user's details
-        const userRole = req.user.role; // Assuming req.user.role indicates 'seeker' or 'provider'
+        const userId = req.user.id; // Authenticated user's ID
+        const userRole = req.user.role; // 'seeker' or 'provider'
+
         let history = [];
 
         if (userRole === 'seeker') {
             // Get all requests where the user is the seeker
-            history = await Request.find({ seeker: userId })
-                .populate('provider', 'name contactNumber') // Populate provider details
-                .select('category description location status history createdAt') // Select relevant fields
+            history = await ServiceRequest.find({ seeker: userId })
+                .populate('provider', 'userName contactNumber') // Populate provider's details
+                .select('category description contactNumber location status history createdAt expirationTime') // Select relevant fields
                 .exec();
 
-            // Format the response for the seeker
             const formattedHistory = history.map(request => ({
                 category: request.category,
                 description: request.description,
+                contactNumber: request.contactNumber,
                 location: request.location.coordinates,
                 status: request.status,
                 provider: request.provider ? {
-                    name: request.provider.name,
+                    name: request.provider.userName,
                     contactNumber: request.provider.contactNumber
                 } : null,
                 history: request.history.map(item => ({
                     status: item.status,
-                    provider: item.provider,
+                    provider: item.provider, // ID of provider who changed the status
                     timestamp: item.timestamp
                 })),
-                createdAt: request.createdAt
+                createdAt: request.createdAt,
+                expirationTime: request.expirationTime
             }));
 
             return res.status(200).json({
@@ -167,42 +169,40 @@ exports.getRequestHistory = async (req, res) => {
             });
 
         } else if (userRole === 'provider') {
-            // Get all requests where the user is the provider in the history
-            
-            history = await Request.find({ 'history.provider': userId })
-                .populate('seeker', 'name contactNumber') // Populate seeker details
-                .select('category description location status history createdAt') // Select relevant fields
+            // Get all requests where the user is the provider
+            history = await ServiceRequest.find({ 'history.provider': userId })
+                .populate('seeker', 'userName contactNumber') // Populate seeker's details
+                .select('category description contactNumber location status history createdAt expirationTime') // Select relevant fields
                 .exec();
-            console.log(history)
-            // Format the response for the provider
+
             const formattedHistory = history.map(request => ({
                 category: request.category,
                 description: request.description,
+                contactNumber: request.contactNumber,
                 location: request.location.coordinates,
                 status: request.status,
                 seeker: request.seeker ? {
-                    name: request.seeker.name,
+                    name: request.seeker.userName,
                     contactNumber: request.seeker.contactNumber
                 } : null,
                 history: request.history.filter(item => String(item.provider) === String(userId)).map(item => ({
                     status: item.status,
                     timestamp: item.timestamp
                 })),
-                createdAt: request.createdAt
+                createdAt: request.createdAt,
+                expirationTime: request.expirationTime
             }));
-            console.log(formattedHistory)
+
             return res.status(200).json({
                 role: 'provider',
                 history: formattedHistory
             });
-
         } else {
-            return res.status(400).json({ message: "Invalid role specified." });
+            return res.status(403).json({ message: 'Invalid user role' });
         }
 
     } catch (error) {
-        return res.status(500).json({ message: "Error fetching history", error });
+        console.error('Error fetching request history:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
-
-
