@@ -1,0 +1,151 @@
+.map-container {
+    display: flex;
+    height: calc(100vh - 100px);
+    margin-top: 100px;
+}
+
+.service-map {
+    flex: 1;
+    height: 100%;
+}
+
+.request-panel {
+    width: 300px;
+    background: white;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.request-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.request-item {
+    padding: 15px;
+    border-radius: 8px;
+    background: #f5f5f5;
+    transition: all 0.3s ease;
+}
+
+.request-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 10px;
+}
+
+.status-online {
+    background: #4CAF50;
+}
+
+.status-offline {
+    background: #9E9E9E;
+}
+
+.status-in-progress {
+    background: #2196F3;
+}
+
+.provider-info, .request-info {
+    padding: 10px;
+}
+
+.provider-info h3, .request-info h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.provider-info button, .request-info button {
+    background: #5a2a8f;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.provider-info button:hover, .request-info button:hover {
+    background: #4a2277;
+}
+
+.modal-content {
+    border-radius: 10px;
+}
+
+.modal-header {
+    background-color: #5a2a8f;
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
+
+.modal-header .close {
+    color: white;
+}
+
+.location-preview {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 15px;
+}
+
+.location-preview button {
+    margin-top: 10px;
+}
+
+#locationPickerMap {
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-control:focus {
+    border-color: #5a2a8f;
+    box-shadow: 0 0 0 0.2rem rgba(90, 42, 143, 0.25);
+}
+
+.btn-primary {
+    background-color: #5a2a8f;
+    border-color: #5a2a8f;
+}
+
+.btn-primary:hover {
+    background-color: #4a2277;
+    border-color: #4a2277;
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 5px;
+    background: #333;
+    color: white;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+} 
