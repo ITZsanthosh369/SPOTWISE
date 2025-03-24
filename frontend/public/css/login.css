@@ -219,6 +219,43 @@ header {
     text-decoration: underline;
 }
 
+/* Error message styling */
+.error-message {
+    color: #ff6666;
+    background-color: rgba(255, 102, 102, 0.2);
+    border-radius: 5px;
+    padding: 8px 15px;
+    margin-top: 10px;
+    font-size: 14px;
+    text-align: center;
+    border-left: 3px solid #ff6666;
+}
+
+.select-field {
+    font-size: 15px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    height: 50px;
+    width: 100%;
+    padding: 0 10px 0 45px; /* Matched padding with input-field */
+    border: none;
+    border-radius: 30px;
+    outline: none;
+    transition: .2s ease;
+    appearance: none; /* Remove default select appearance */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+.select-field option {
+    background-color: #333;
+    color: #fff;
+}
+
+
 
 @media only screen and (max-width: 786px) {
     .nav-button {

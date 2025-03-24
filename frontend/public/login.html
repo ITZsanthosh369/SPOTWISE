@@ -18,7 +18,7 @@
             </div>
             <div class="nav-button">
                 <button class="btn white-btn" id="loginBtn" onclick="login()">Sign In</button>
-                <button class="btn" id="registerBtn" onclick="register()    ">Sign Up</button>
+                <button class="btn" id="registerBtn" onclick="register()">Sign Up</button>
             </div>
             <div class="nav-menu-btn">
                 <i class="bx bx-menu" onclick="myMenuFunction()"></i>
@@ -35,26 +35,28 @@
                     <span>Don't have an account? <a href="#" onclick="register()">Sign Up</a></span>
                     <header>Login</header>
                 </div>
-                <div class="input-box">
-                    <input type="text" class="input-field" placeholder="Username or Email">
-                    <i class="bx bx-user"></i>
-                </div>
-                <div class="input-box">
-                    <input type="password" class="input-field" placeholder="Password">
-                    <i class="bx bx-lock-alt"></i>
-                </div>
-                <div class="input-box">
-                    <input type="submit" class="submit" value="Sign In">
-                </div>
-                <div class="two-col">
-                    <div class="one">
-                        <input type="checkbox" id="login-check">
-                        <label for="login-check"> Remember Me</label>
+                <form id="loginForm">
+                    <div class="input-box">
+                        <input type="text" class="input-field" placeholder="Email" name="email" required>
+                        <i class="bx bx-user"></i>
                     </div>
-                    <div class="two">
-                        <label><a href="#">Forgot password?</a></label>
+                    <div class="input-box">
+                        <input type="password" class="input-field" placeholder="Password" name="password" required>
+                        <i class="bx bx-lock-alt"></i>
                     </div>
-                </div>
+                    <div class="input-box">
+                        <input type="submit" class="submit" value="Sign In">
+                    </div>
+                    <div class="two-col">
+                        <div class="one">
+                            <input type="checkbox" id="login-check">
+                            <label for="login-check"> Remember Me</label>
+                        </div>
+                        <div class="two">
+                            <label><a href="#">Forgot password?</a></label>
+                        </div>
+                    </div>
+                </form>
             </div>
 
             <!-- Registration form -->
@@ -63,45 +65,45 @@
                     <span>Have an account? <a href="#" onclick="login()">Login</a></span>
                     <header>Sign Up</header>
                 </div>
-                <div class="two-forms">
+                <form id="registerForm">
                     <div class="input-box">
-                        <input type="text" class="input-field" placeholder="Firstname">
+                        <input type="text" class="input-field" placeholder="Username" name="userName" required>
                         <i class="bx bx-user"></i>
                     </div>
                     <div class="input-box">
-                        <input type="text" class="input-field" placeholder="Lastname">
-                        <i class="bx bx-user"></i>
+                        <input type="text" class="input-field" placeholder="Email" name="email" required>
+                        <i class="bx bx-envelope"></i>
                     </div>
-                </div>
-                <div class="input-box">
-                    <input type="text" class="input-field" placeholder="Email">
-                    <i class="bx bx-envelope"></i>
-                </div>
-                <div class="input-box">
-                    <input type="password" class="input-field" placeholder="Password">
-                    <i class="bx bx-lock-alt"></i>
-                </div>
-                <div class="input-box">
-                    <input type="submit" class="submit" value="Register">
-                </div>
-                <!-- Add the two-col div here -->
-                <div class="two-col">
-                    <div class="one">
-                        <input type="checkbox" id="register-check">
-                        <label for="register-check"> Remember Me</label>
+                    <div class="input-box">
+                        <input type="password" class="input-field" placeholder="Password" name="password" required>
+                        <i class="bx bx-lock-alt"></i>
                     </div>
-                    <div class="two">
-                        <label><a href="terms.html">Terms & Conditions</a></label>
+                    <div class="input-box">
+                        <select class="input-field select-field" name="role" required>
+                            <option value="seeker">Seeker</option>
+                            <option value="provider">Provider</option>
+                        </select>
+                        <i class="bx bx-user-pin"></i>
                     </div>
-                </div>
+                    <div class="input-box">
+                        <input type="submit" class="submit" value="Register">
+                    </div>
+                    <div class="two-col">
+                        <div class="one">
+                            <input type="checkbox" id="register-check">
+                            <label for="register-check"> Remember Me</label>
+                        </div>
+                        <div class="two">
+                            <label><a href="terms.html">Terms & Conditions</a></label>
+                        </div>
+                    </div>
+                </form>
             </div>
 
         </div>
     </div>
 
-
     <script>
-
         function myMenuFunction() {
             var i = document.getElementById("navMenu");
 
@@ -111,10 +113,6 @@
                 i.className = "nav-menu";
             }
         }
-
-    </script>
-
-    <script>
 
         var a = document.getElementById("loginBtn");
         var b = document.getElementById("registerBtn");
@@ -139,6 +137,143 @@
             y.style.opacity = 1;
         }
 
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const email = e.target.email.value;
+            const password = e.target.password.value;
+
+            try {
+                // Use the full backend URL instead of a relative path
+                const res = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                // Check if response is ok and contains JSON content
+                if (res.headers.get('content-type')?.includes('application/json')) {
+                    const data = await res.json();
+                    
+                    if (res.ok) {
+                        // Save token and user role for authorization
+                        localStorage.setItem('token', data.token);
+                        
+                        // Decode the JWT to get user info (without a library)
+                        const payload = JSON.parse(atob(data.token.split('.')[1]));
+                        localStorage.setItem('userRole', payload.user.role);
+                        localStorage.setItem('userId', payload.user.id);
+                        
+                        // Redirect to index.html (fixed path - removed leading slash)
+                        window.location.href = 'index.html';
+                    } else {
+                        // Display error message from JSON response
+                        showLoginError(data.message || 'Login failed. Please check your credentials.');
+                    }
+                } else {
+                    // Handle non-JSON response
+                    const text = await res.text();
+                    console.error('Non-JSON response:', text);
+                    showLoginError('Server returned an unexpected response. Please try again later.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showLoginError('Connection error. Please try again later.');
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const userName = e.target.userName.value;
+            const email = e.target.email.value;
+            const password = e.target.password.value;
+            const role = e.target.role.value;
+
+            // Basic validation
+            if (password.length < 6) {
+                showRegisterError('Password must be at least 6 characters long');
+                return;
+            }
+
+            try {
+                // Use the full backend URL instead of a relative path
+                const res = await fetch('http://localhost:3000/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userName, email, password, role })
+                });
+
+                // Check if response is ok and contains JSON content
+                if (res.headers.get('content-type')?.includes('application/json')) {
+                    const data = await res.json();
+                    
+                    if (res.ok) {
+                        // Store token if available
+                        if (data.token) {
+                            localStorage.setItem('token', data.token);
+                            
+                            // Decode the JWT to get user info
+                            const payload = JSON.parse(atob(data.token.split('.')[1]));
+                            localStorage.setItem('userRole', payload.user.role);
+                            localStorage.setItem('userId', payload.user.id);
+                            
+                            // Redirect to index.html for both user types
+                            window.location.href = 'index.html';
+                        } else {
+                            // Registration successful but no auto-login
+                            showSuccessMessage('Registration successful! Please login with your new account.');
+                            login(); // Switch to login form
+                        }
+                    } else {
+                        showRegisterError(data.message || 'Registration failed. Please try again.');
+                    }
+                } else {
+                    // Handle non-JSON response
+                    const text = await res.text();
+                    console.error('Non-JSON response:', text);
+                    showRegisterError('Server returned an unexpected response. Please try again later.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showRegisterError('Connection error. Please try again later.');
+            }
+        });
+
+        // Helper functions for displaying messages
+        function showLoginError(message) {
+            const errorElement = document.createElement('div');
+            errorElement.className = 'error-message';
+            errorElement.textContent = message;
+            
+            // Remove any existing error messages
+            const existingError = document.querySelector('#login .error-message');
+            if (existingError) existingError.remove();
+            
+            // Insert error after the submit button
+            const submitBtn = document.querySelector('#login .submit').parentNode;
+            submitBtn.insertAdjacentElement('afterend', errorElement);
+        }
+
+        function showRegisterError(message) {
+            const errorElement = document.createElement('div');
+            errorElement.className = 'error-message';
+            errorElement.textContent = message;
+            
+            // Remove any existing error messages
+            const existingError = document.querySelector('#register .error-message');
+            if (existingError) existingError.remove();
+            
+            // Insert error after the submit button
+            const submitBtn = document.querySelector('#register .submit').parentNode;
+            submitBtn.insertAdjacentElement('afterend', errorElement);
+        }
+
+        function showSuccessMessage(message) {
+            alert(message);
+        }
     </script>
 
 </body>
