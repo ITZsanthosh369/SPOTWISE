@@ -257,3 +257,51 @@ exports.getRequestPin = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// Cancel a service request (only by the seeker who created it)
+exports.cancelRequest = async (req, res) => {
+    try {
+        console.log(`Request ID: ${req.params.id}`); // Log the request ID
+        console.log(`User Info: ${JSON.stringify(req.user)}`); // Log the user info
+
+        const requestId = req.params.id;
+        console.log(`Request ID: ${requestId}`); // Log the request ID
+
+        const user = await User.findById(req.user.id).select('status role');
+        console.log(`User Info: ${JSON.stringify(user)}`); // Log the user info
+
+        // Ensure the user is a seeker
+        if (req.user.role !== 'seeker') {
+            console.log('User is not a seeker'); // Log role mismatch
+            return res.status(403).json({ message: 'Only seekers can cancel requests' });
+        }
+
+        // Find the request
+        const request = await ServiceRequest.findById(requestId);
+        console.log(`Service Request: ${JSON.stringify(request)}`); // Log the service request
+
+        if (!request) {
+            console.log('Service request not found'); // Log missing request
+            return res.status(404).json({ message: 'Service request not found' });
+        }
+
+        if (request.status !== 'pending') {
+            console.log(`Request status is not pending: ${request.status}`); // Log invalid status
+            return res.status(400).json({ message: 'Request is in progress and cannot be cancelled.' });
+        }
+
+        // Update request status to cancelled
+        request.status = 'cancelled';
+        console.log('Request status updated to cancelled'); // Log status update
+
+        // Save the updated request
+        await request.save();
+        console.log('Request saved successfully'); // Log successful save
+
+        res.status(200).json({ message: 'Request cancelled successfully' });
+    } catch (error) {
+        console.error('Error cancelling request:', error); // Log the error
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+

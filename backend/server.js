@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001; // Changed port to 3001
 app.listen(PORT, () => {
     console.log(`App listening on port ${PORT}`);
 });
