@@ -18,6 +18,11 @@ const SpotWiseServiceHub = (function() {
     let activeRequestTimer = null;
     let isProviderTracking = false;
     
+    // Define the backend API base URL
+    const API_BASE_URL = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://backend-itzsanthosh369s-projects.vercel.app';
+    
     // Module object to hold public methods and properties
     const module = {};
     
@@ -196,7 +201,7 @@ const SpotWiseServiceHub = (function() {
     // Fetch provider status from backend and update localStorage
     async function fetchProviderStatus() {
         try {
-            const response = await fetch('http://localhost:3000/api/users/status', {
+            const response = await fetch(`${API_BASE_URL}/api/users/status`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -266,7 +271,7 @@ const SpotWiseServiceHub = (function() {
     // Update provider status on the backend
     async function updateProviderStatusOnBackend(status) {
         try {
-            const response = await fetch('http://localhost:3000/api/users/status', {
+            const response = await fetch(`${API_BASE_URL}/api/users/status`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -698,7 +703,7 @@ const SpotWiseServiceHub = (function() {
             };
             
             // Send request to backend
-            const response = await fetch('http://localhost:3000/api/service-requests/create', {
+            const response = await fetch(`${API_BASE_URL}/api/service-requests/create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -747,7 +752,7 @@ const SpotWiseServiceHub = (function() {
         container.style.display = 'none';
         
         try {
-            const response = await fetch('http://localhost:3000/api/service-requests/history', {
+            const response = await fetch(`${API_BASE_URL}/api/service-requests/history`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -873,7 +878,7 @@ const SpotWiseServiceHub = (function() {
         container.style.display = 'none';
         
         try {
-            const response = await fetch('http://localhost:3000/api/service-requests/active', {
+            const response = await fetch(`${API_BASE_URL}/api/service-requests/active`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1082,7 +1087,7 @@ const SpotWiseServiceHub = (function() {
             await updateProviderStatusOnBackend('active');
             localStorage.setItem('providerStatus', 'active');
             
-            const response = await fetch(`http://localhost:3000/api/service-requests/accept/${requestId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/service-requests/accept/${requestId}`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1134,7 +1139,7 @@ const SpotWiseServiceHub = (function() {
     // Check for active job
     async function checkActiveJob() {
         try {
-            const response = await fetch('http://localhost:3000/api/service-requests/history', {
+            const response = await fetch(`${API_BASE_URL}/api/service-requests/history`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1267,7 +1272,7 @@ const SpotWiseServiceHub = (function() {
             completeBtn.disabled = true;
             completeBtn.textContent = 'Processing...';
             
-            const response = await fetch(`http://localhost:3000/api/service-requests/complete/${activeRequest._id}`, {
+            const response = await fetch(`${API_BASE_URL}/api/service-requests/complete/${activeRequest._id}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1315,7 +1320,7 @@ const SpotWiseServiceHub = (function() {
     // Add a dedicated function to fetch PIN if needed
     async function fetchRequestPin(requestId) {
         try {
-            const response = await fetch(`http://localhost:3000/api/service-requests/pin/${requestId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/service-requests/pin/${requestId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1343,7 +1348,7 @@ const SpotWiseServiceHub = (function() {
         }
         
         try {
-            const response = await fetch(`http://localhost:3000/api/service-requests/cancel/${requestId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/service-requests/cancel/${requestId}`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`

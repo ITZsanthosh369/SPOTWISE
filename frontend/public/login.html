@@ -8,6 +8,11 @@
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="css/login.css">
     <title>SPOT WISE| Login & Registration</title>
+    <script>
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000'
+            : 'https://backend-itzsanthosh369s-projects.vercel.app';
+    </script>
 </head>
 
 <body>
@@ -178,7 +183,7 @@
                 loginBtn.querySelector('.spinner-border').classList.remove('d-none');
 
                 // Use the full backend URL instead of a relative path
-                const res = await fetch('http://localhost:3000/api/auth/login', {
+                const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -238,7 +243,7 @@
 
             try {
                 // Use the full backend URL instead of a relative path
-                const res = await fetch('http://localhost:3000/api/auth/register', {
+                const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

@@ -10,7 +10,21 @@ const eventRoutes = require('./routes/eventRoutes'); // Add this line
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+const allowedOrigins = [
+    'http://localhost:3000', // Local frontend
+    'https://your-vercel-frontend-domain.vercel.app' // Vercel frontend
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }
+}));
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)

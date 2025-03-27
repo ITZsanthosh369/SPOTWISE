@@ -1,5 +1,9 @@
 // Authentication script for all pages
 
+// Define the backend API base URL
+const API_BASE_URL = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
+        : 'https://backend-itzsanthosh369s-projects.vercel.app';
 // Update profile dropdown with username if available
 function updateProfileDropdown() {
     const profileIcon = document.querySelector('.profile-icon');
@@ -32,7 +36,7 @@ async function login(email, password) {
             loginButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging in...';
         }
 
-        const response = await window.fetchWithErrorHandling('http://localhost:3000/api/auth/login', {
+        const response = await window.fetchWithErrorHandling(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -115,7 +119,7 @@ async function updateProviderStatusOnLogin(status) {
         const token = localStorage.getItem('token');
         if (!token) return;
         
-        const response = await window.fetchWithErrorHandling('http://localhost:3000/api/users/status', {
+        const response = await window.fetchWithErrorHandling(`${API_BASE_URL}/api/users/status`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -145,7 +149,7 @@ function updateProviderStatusOnLogout(status) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2000);
         
-        fetch('http://localhost:3000/api/users/status', {
+        fetch(`${API_BASE_URL}/api/users/status`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -157,7 +161,7 @@ function updateProviderStatusOnLogout(status) {
           .catch(() => {
             // If async fetch fails, fallback to synchronous XHR
             const xhr = new XMLHttpRequest();
-            xhr.open('PATCH', 'http://localhost:3000/api/users/status', false); // false = synchronous
+            xhr.open('PATCH', `${API_BASE_URL}/api/users/status`, false); // false = synchronous
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             
@@ -180,7 +184,7 @@ async function fetchProviderStatus() {
         
         if (userRole !== 'provider' || !token) return;
         
-        const response = await window.fetchWithErrorHandling('http://localhost:3000/api/users/status', {
+        const response = await window.fetchWithErrorHandling(`${API_BASE_URL}/api/users/status`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
