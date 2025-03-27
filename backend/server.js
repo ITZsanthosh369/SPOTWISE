@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 const allowedOrigins = [
-    'http://localhost:3000', // Local frontend
+    'http://127.0.0.1:5501/', // Local frontend
     'https://your-vercel-frontend-domain.vercel.app' // Vercel frontend
 ];
 

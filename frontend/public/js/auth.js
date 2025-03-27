@@ -3,7 +3,7 @@
 // Define the backend API base URL
 const API_BASE_URL = window.location.hostname === 'localhost'
         ? 'http://localhost:3000'
-        : 'https://backend-itzsanthosh369s-projects.vercel.app';
+        : 'https://backend-green-zeta-69.vercel.app';
 // Update profile dropdown with username if available
 function updateProfileDropdown() {
     const profileIcon = document.querySelector('.profile-icon');
