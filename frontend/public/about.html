@@ -62,9 +62,23 @@
               </li>
             </ul>
             <div class="quote_btn-container">
-              <a href="login.html" class="quote_btn">
-                LogIn
+              <!-- Login button - visible when user is not logged in -->
+              <a href="login.html" class="quote_btn" id="loginBtn">
+                Login
               </a>
+              
+              <!-- Profile dropdown - visible when user is logged in -->
+              <div class="dropdown" id="profileDropdown" style="display: none;">
+                <a class="dropdown-toggle profile-icon" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <i class="fa fa-user-circle-o" aria-hidden="true"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuLink">
+                  <a class="dropdown-item" href="profile.html"><i class="fa fa-user" aria-hidden="true"></i> My Profile</a>
+                  <a class="dropdown-item" href="history.html"><i class="fa fa-history" aria-hidden="true"></i> History</a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item" href="#" id="logoutBtn"><i class="fa fa-sign-out" aria-hidden="true"></i> Logout</a>
+                </div>
+              </div>
             </div>
           </div>
         </nav>
@@ -220,6 +234,8 @@
   <!-- bootstrap js -->
   <script src="js/bootstrap.js"></script>
   <script src="js/custom.js"></script>
+  <!-- Authentication script -->
+  <script src="js/auth.js"></script>
   <!-- Google Map -->
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCh39n5U-4IoWpsVGUHWdqB6puEkhRLdmI&callback=myMap"></script>
   <!-- End Google Map -->
