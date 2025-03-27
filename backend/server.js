@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 3001; // Changed port to 3001
+const PORT = process.env.PORT || 3000; // Use dynamic port for Vercel
 app.listen(PORT, () => {
-    console.log(`App listening on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
