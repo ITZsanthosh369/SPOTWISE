@@ -13,6 +13,151 @@ function updateProfileDropdown() {
     }
 }
 
+// Function to handle login
+async function login(email, password) {
+    try {
+        const response = await fetch('http://localhost:3000/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Login failed');
+        }
+
+        const data = await response.json();
+        
+        // Store auth data in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userId', data.userId);
+        localStorage.setItem('userName', data.userName);
+        localStorage.setItem('userRole', data.role);
+        
+        // If user is a provider, set their status to online
+        if (data.role === 'provider') {
+            // Update provider status to online in backend
+            await updateProviderStatusOnLogin('online');
+        }
+        
+        // Update UI based on login state
+        updateAuthUI(true);
+        
+        return true;
+    } catch (error) {
+        console.error('Login error:', error);
+        throw error;
+    }
+}
+
+// Function to handle logout
+function logout() {
+    // If user is a provider, set their status to offline before clearing localStorage
+    const userRole = localStorage.getItem('userRole');
+    const token = localStorage.getItem('token');
+    
+    if (userRole === 'provider' && token) {
+        // Update provider status to offline in backend
+        updateProviderStatusOnLogout('offline');
+    }
+    
+    // Clear localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('providerStatus');
+    
+    // Update UI based on logout state
+    updateAuthUI(false);
+    
+    // Redirect to home page if not already there
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+        window.location.href = 'index.html';
+    }
+}
+
+// Update provider status on login
+async function updateProviderStatusOnLogin(status) {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const response = await fetch('http://localhost:3000/api/users/status', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ status })
+        });
+        
+        if (!response.ok) {
+            console.warn('Failed to update provider status on login');
+            return;
+        }
+        
+        // Update localStorage with the new status
+        localStorage.setItem('providerStatus', status);
+        
+    } catch (error) {
+        console.error('Error updating provider status on login:', error);
+    }
+}
+
+// Update provider status on logout (using synchronous XHR to ensure it completes before page unload)
+function updateProviderStatusOnLogout(status) {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    const xhr = new XMLHttpRequest();
+    xhr.open('PATCH', 'http://localhost:3000/api/users/status', false); // false = synchronous
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    
+    try {
+        xhr.send(JSON.stringify({ status }));
+    } catch (e) {
+        console.error('Error updating provider status on logout:', e);
+    }
+}
+
+// Fetch provider status from backend
+async function fetchProviderStatus() {
+    try {
+        const userRole = localStorage.getItem('userRole');
+        const token = localStorage.getItem('token');
+        
+        if (userRole !== 'provider' || !token) return;
+        
+        const response = await fetch('http://localhost:3000/api/users/status', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            console.warn('Failed to fetch provider status');
+            return;
+        }
+        
+        const data = await response.json();
+        
+        // Update localStorage with the fetched status
+        if (data.status) {
+            localStorage.setItem('providerStatus', data.status);
+        }
+        
+        return data.status;
+    } catch (error) {
+        console.error('Error fetching provider status:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Check if user is logged in (token exists in localStorage)
     const token = localStorage.getItem('token');
@@ -38,25 +183,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            
-            // If provider, send a logout request to update status
-            if (userRole === 'provider') {
-                fetch('/api/auth/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }).catch(err => console.error('Logout error:', err));
+            logout();
+        });
+    }
+    
+    // Fetch provider status if logged in as provider
+    if (token && localStorage.getItem('userRole') === 'provider') {
+        fetchProviderStatus().then(status => {
+            // If there are UI elements that need to reflect this status, update them here
+            if (typeof updateStatusUI === 'function' && status) {
+                updateStatusUI(status);
             }
-            
-            // Clear authentication data
-            localStorage.removeItem('token');
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('userName');
-            
-            // Redirect to home page
-            window.location.href = 'index.html';
         });
     }
 });

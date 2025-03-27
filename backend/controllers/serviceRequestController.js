@@ -156,10 +156,11 @@ exports.getRequestHistory = async (req, res) => {
             // Get all requests where the user is the seeker
             history = await ServiceRequest.find({ seeker: userId })
                 .populate('provider', 'userName contactNumber') // Populate provider's details
-                .select('category description contactNumber location status history createdAt expirationTime') // Select relevant fields
+                .select('category description contactNumber location status history createdAt expirationTime generatedPin') // Add generatedPin to selected fields
                 .exec();
 
             const formattedHistory = history.map(request => ({
+                _id: request._id,
                 category: request.category,
                 description: request.description,
                 contactNumber: request.contactNumber,
@@ -169,13 +170,15 @@ exports.getRequestHistory = async (req, res) => {
                     name: request.provider.userName,
                     contactNumber: request.provider.contactNumber
                 } : null,
-                history: request.history.map(item => ({
+                history: request.history ? request.history.map(item => ({
                     status: item.status,
                     provider: item.provider, // ID of provider who changed the status
                     timestamp: item.timestamp
-                })),
+                })) : [],
                 createdAt: request.createdAt,
-                expirationTime: request.expirationTime
+                expirationTime: request.expirationTime,
+                // Only include PIN for in-progress requests
+                generatedPin: request.status === 'in-progress' ? request.generatedPin : undefined
             }));
 
             return res.status(200).json({
@@ -191,6 +194,7 @@ exports.getRequestHistory = async (req, res) => {
                 .exec();
 
             const formattedHistory = history.map(request => ({
+                _id: request._id,
                 category: request.category,
                 description: request.description,
                 contactNumber: request.contactNumber,
@@ -215,9 +219,41 @@ exports.getRequestHistory = async (req, res) => {
         } else {
             return res.status(403).json({ message: 'Invalid user role' });
         }
-
     } catch (error) {
         console.error('Error fetching request history:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Get verification PIN for a specific request
+exports.getRequestPin = async (req, res) => {
+    try {
+        const requestId = req.params.id;
+        const userId = req.user.id;
+        
+        const request = await ServiceRequest.findById(requestId);
+        
+        if (!request) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+        
+        // Only allow seeker to fetch PIN for their own request
+        if (request.seeker.toString() !== userId) {
+            return res.status(403).json({ message: 'Not authorized to access this request' });
+        }
+        
+        // Only return PIN if request is in-progress
+        if (request.status !== 'in-progress') {
+            return res.status(400).json({ message: 'PIN is only available for in-progress requests' });
+        }
+        
+        res.json({
+            requestId: request._id,
+            generatedPin: request.generatedPin
+        });
+        
+    } catch (error) {
+        console.error('Error fetching request PIN:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

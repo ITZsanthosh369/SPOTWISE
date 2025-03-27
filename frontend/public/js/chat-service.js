@@ -1,3 +1,8 @@
+/**
+ * SpotWise Chat Service
+ * Handles real-time messaging between service providers and seekers
+ */
+
 class ChatService {
     constructor() {
         this.activeChat = null;
@@ -36,85 +41,6 @@ class ChatService {
         });
     }
 
-    // Setup WebSocket listeners for chat
-    setupSocketListeners() {
-        window.socketService.socket.on('newMessage', (data) => {
-            this.handleNewMessage(data);
-        });
-
-        window.socketService.socket.on('messageRead', (data) => {
-            this.updateMessageReadStatus(data);
-        });
-    }
-
-    // Initialize chat for a service request
-    async initializeChat(requestId, otherUser) {
-        try {
-            const response = await fetch(`/api/chat/init/${requestId}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-
-            if (!response.ok) throw new Error('Failed to initialize chat');
-
-            const chat = await response.json();
-            this.activeChat = chat._id;
-            this.loadChatHistory();
-            
-            // Update chat header with other user's name
-            document.querySelector('.chat-header h4').textContent = 
-                `Chat with ${otherUser.userName}`;
-            
-            // Show chat panel
-            document.getElementById('chatPanel').classList.add('active');
-        } catch (error) {
-            console.error('Chat initialization error:', error);
-            showNotification('Error', 'Failed to start chat');
-        }
-    }
-
-    // Load chat history
-    async loadChatHistory() {
-        try {
-            const response = await fetch(`/api/chat/${this.activeChat}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-
-            if (!response.ok) throw new Error('Failed to load chat history');
-
-            const chat = await response.json();
-            this.displayChatHistory(chat.messages);
-            this.markMessagesAsRead();
-        } catch (error) {
-            console.error('Load chat history error:', error);
-        }
-    }
-
-    // Display chat history
-    displayChatHistory(messages) {
-        const chatMessages = document.getElementById('chatMessages');
-        const currentUserId = localStorage.getItem('userId');
-        
-        chatMessages.innerHTML = messages.map(message => `
-            <div class="message ${message.sender._id === currentUserId ? 'sent' : 'received'}">
-                <div class="message-content">
-                    ${message.content}
-                    <span class="message-time">
-                        ${new Date(message.timestamp).toLocaleTimeString()}
-                    </span>
-                    ${message.read ? '<span class="read-status">✓✓</span>' : '<span class="read-status">✓</span>'}
-                </div>
-            </div>
-        `).join('');
-
-        // Scroll to bottom
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
     // Send a message
     async sendMessage() {
         const input = document.getElementById('messageInput');
@@ -133,8 +59,19 @@ class ChatService {
             input.value = '';
         } catch (error) {
             console.error('Send message error:', error);
-            showNotification('Error', 'Failed to send message');
+            alert('Failed to send message');
         }
+    }
+
+    // Setup WebSocket listeners for chat
+    setupSocketListeners() {
+        window.socketService.socket.on('newMessage', (data) => {
+            this.handleNewMessage(data);
+        });
+
+        window.socketService.socket.on('messageRead', (data) => {
+            this.updateMessageReadStatus(data);
+        });
     }
 
     // Handle incoming message
@@ -174,41 +111,13 @@ class ChatService {
     // Mark messages as read
     async markMessagesAsRead() {
         if (!this.activeChat) return;
-
+        
         try {
-            await fetch(`/api/chat/${this.activeChat}/read`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-
-            // Emit read status through socket
-            window.socketService.socket.emit('markRead', {
+            window.socketService.socket.emit('markMessagesRead', {
                 chatId: this.activeChat
             });
         } catch (error) {
-            console.error('Mark messages as read error:', error);
-        }
-    }
-
-    // Update message read status
-    updateMessageReadStatus(data) {
-        if (data.chatId === this.activeChat) {
-            const messages = document.querySelectorAll('.message.sent .read-status');
-            messages.forEach(status => {
-                status.textContent = '✓✓';
-            });
-        }
-    }
-
-    // Update unread message badge
-    updateUnreadBadge(chatId) {
-        const badge = document.querySelector(`[data-chat-id="${chatId}"] .unread-badge`);
-        if (badge) {
-            const count = this.unreadMessages.get(chatId) || 0;
-            badge.textContent = count;
-            badge.style.display = count > 0 ? 'block' : 'none';
+            console.error('Error marking messages as read:', error);
         }
     }
 }
@@ -228,4 +137,4 @@ function sendMessage() {
 // Initialize when document is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.chatService.init();
-}); 
+});

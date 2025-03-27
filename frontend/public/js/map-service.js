@@ -47,7 +47,26 @@ class MapService {
                 let userLocation;
                 
                 if (window.locationService) {
-                    userLocation = await window.locationService.getCurrentLocation();
+                    try {
+                        userLocation = await window.locationService.getCurrentLocation({ 
+                            requestPermission: false, // Don't show the permission UI yet
+                            highAccuracy: true 
+                        });
+                    } catch (locationError) {
+                        console.warn('Error using location service:', locationError);
+                        
+                        // Fallback to internal method
+                        try {
+                            const position = await this.getCurrentLocation();
+                            userLocation = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            };
+                        } catch (internalError) {
+                            console.warn('Error using internal geolocation:', internalError);
+                            throw new Error('Could not get location');
+                        }
+                    }
                 } else {
                     // Fallback to our internal method
                     const position = await this.getCurrentLocation();
@@ -81,17 +100,36 @@ class MapService {
             } catch (error) {
                 console.warn('Error getting current location:', error);
                 
-                // Try to use last known location from localStorage
-                const lastLocation = localStorage.getItem('lastUserLocation');
-                if (lastLocation) {
-                    try {
-                        const parsedLocation = JSON.parse(lastLocation);
-                        this.map.setCenter(parsedLocation);
-                        this.addCurrentLocationMarker(parsedLocation);
-                    } catch (e) {
-                        console.error('Error parsing stored location:', e);
+                // Try to use last known location from localStorage or locationService
+                let fallbackLocation = null;
+                
+                // Try location service first
+                if (window.locationService && window.locationService.lastLocation) {
+                    fallbackLocation = window.locationService.lastLocation;
+                }
+                
+                // Then try localStorage
+                if (!fallbackLocation) {
+                    const lastLocation = localStorage.getItem('lastUserLocation');
+                    if (lastLocation) {
+                        try {
+                            fallbackLocation = JSON.parse(lastLocation);
+                        } catch (e) {
+                            console.error('Error parsing stored location:', e);
+                        }
                     }
                 }
+                
+                // Use fallback or default
+                if (fallbackLocation) {
+                    this.map.setCenter(fallbackLocation);
+                    this.addCurrentLocationMarker(fallbackLocation);
+                } else {
+                    console.log('Using default location');
+                }
+                
+                // Add a notice to the map that location access could improve the experience
+                this.addLocationPermissionNotice();
             }
 
             // Add resize event listener to handle responsive layout changes
@@ -122,8 +160,111 @@ class MapService {
                 maximumAge: 0
             };
             
-            navigator.geolocation.getCurrentPosition(resolve, reject, options);
+            // Show loading indicator
+            const locationLoadingIndicator = document.createElement('div');
+            locationLoadingIndicator.id = 'locationLoadingIndicator';
+            locationLoadingIndicator.innerHTML = `
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                            background: rgba(255,255,255,0.8); padding: 20px; border-radius: 10px; 
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 9999;">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <p>Getting your location...</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(locationLoadingIndicator);
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    // Remove loading indicator
+                    const loadingIndicator = document.getElementById('locationLoadingIndicator');
+                    if (loadingIndicator) loadingIndicator.remove();
+                    
+                    resolve(position);
+                }, 
+                (error) => {
+                    // Remove loading indicator
+                    const loadingIndicator = document.getElementById('locationLoadingIndicator');
+                    if (loadingIndicator) loadingIndicator.remove();
+                    
+                    console.warn('Geolocation error:', error);
+                    
+                    // Handle different error types
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            reject(new Error('Location permission denied'));
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            reject(new Error('Location information is unavailable'));
+                            break;
+                        case error.TIMEOUT:
+                            reject(new Error('The request to get location timed out'));
+                            break;
+                        default:
+                            reject(new Error('An unknown error occurred'));
+                            break;
+                    }
+                }, 
+                options
+            );
         });
+    }
+
+    // Add a notice to request location permission
+    addLocationPermissionNotice() {
+        if (!this.isInitialized || !this.map) return;
+        
+        // Create the control div
+        const controlDiv = document.createElement('div');
+        controlDiv.className = 'location-permission-control';
+        controlDiv.style.margin = '10px';
+        controlDiv.style.backgroundColor = '#fff';
+        controlDiv.style.border = '2px solid #fff';
+        controlDiv.style.borderRadius = '3px';
+        controlDiv.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+        controlDiv.style.cursor = 'pointer';
+        controlDiv.style.textAlign = 'center';
+        controlDiv.title = 'Click to use your current location';
+        
+        // Set the inner content
+        controlDiv.innerHTML = `
+            <div style="padding: 6px 10px;">
+                <i class="fa fa-location-arrow" style="margin-right: 5px;"></i> Use My Location
+            </div>
+        `;
+        
+        // Add click event
+        controlDiv.addEventListener('click', () => {
+            if (window.locationService) {
+                window.locationService.getCurrentLocation({ requestPermission: true })
+                    .then(position => {
+                        this.map.setCenter(position);
+                        this.addCurrentLocationMarker(position);
+                        controlDiv.remove(); // Remove the control after it's used
+                    })
+                    .catch(error => console.warn('Error getting location:', error));
+            } else {
+                this.getCurrentLocation()
+                    .then(position => {
+                        const location = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        this.map.setCenter(location);
+                        this.addCurrentLocationMarker(location);
+                        controlDiv.remove(); // Remove the control after it's used
+                    })
+                    .catch(error => console.warn('Error getting location:', error));
+            }
+        });
+        
+        // Add the control to the map
+        this.map.controls[google.maps.ControlPosition.TOP_CENTER].push(controlDiv);
     }
 
     // Add marker for current user's location

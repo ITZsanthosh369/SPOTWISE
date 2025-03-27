@@ -55,36 +55,32 @@ exports.register = async (req, res) => {
     }
 };
 
-/// Login user
+// @desc    Authenticate user & get token
+// @route   POST /api/auth/login
+// @access  Public
 exports.login = async (req, res) => {
-    // Validate incoming request
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
     const { email, password } = req.body;
 
     try {
         // Check if user exists
         let user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: 'Invalid Credentials' });
+            return res.status(400).json({ message: 'Invalid credentials' });
         }
 
-        // Compare passwords
-        const isMatch = await user.comparePassword(password);
+        // Verify password
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid Credentials' });
+            return res.status(400).json({ message: 'Invalid credentials' });
         }
 
-        // Set status to online for providers
+        // If user is a provider, update status to online
         if (user.role === 'provider') {
             user.status = 'online';
-            await user.save(); // Save the updated status
+            await user.save();
         }
 
-        // Create JWT payload
+        // Create and return JWT token
         const payload = {
             user: {
                 id: user.id,
@@ -92,49 +88,56 @@ exports.login = async (req, res) => {
             }
         };
 
-        // Sign JWT token
         jwt.sign(
             payload,
             process.env.JWT_SECRET,
-            { expiresIn: '7d' },
+            { expiresIn: '24h' },
             (err, token) => {
                 if (err) throw err;
-                res.json({ token });
+                res.json({ 
+                    token,
+                    userId: user.id,
+                    userName: user.userName,
+                    role: user.role,
+                    status: user.status || 'offline'
+                });
             }
         );
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server error');
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
-// Logout user - This will need to be implemented in your controller
-exports.logout = async (req, res) => {
-    try {
-        const userId = req.user.id;
-
-        // Set status to offline for providers
-        const user = await User.findById(userId);
-        if (user && user.role === 'provider') {
-            user.status = 'offline';
-            await user.save(); // Save the updated status
-        }
-
-        res.status(200).json({ message: 'User logged out successfully' });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server error');
-    }
-};
-
-
-// Get authenticated user details
+// @desc    Get logged in user
+// @route   GET /api/auth/user
+// @access  Private
 exports.getUser = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password'); // Exclude password field
+        const user = await User.findById(req.user.id).select('-password');
         res.json(user);
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server error');
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Logout user (if they're a provider, set status to offline)
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = async (req, res) => {
+    try {
+        // If user is a provider, update status to offline
+        const user = await User.findById(req.user.id);
+        
+        if (user && user.role === 'provider') {
+            user.status = 'offline';
+            await user.save();
+        }
+        
+        res.json({ message: 'Logged out successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: 'Server error' });
     }
 };

@@ -16,105 +16,104 @@ class RequestService {
             createRequestBtn.style.display = userRole === 'seeker' ? 'block' : 'none';
         }
 
-        // Initialize location picker map
-        this.initLocationPicker();
+        // Initialize maps when Google Maps API is fully loaded
+        if (window.google && google.maps) {
+            this.initLocationPicker();
+        } else {
+            // Wait for Google Maps to load
+            window.initMapsCallback = () => {
+                this.initLocationPicker();
+            };
+        }
     }
 
     // Initialize the location picker map
     initLocationPicker() {
-        const mapElement = document.getElementById('locationPickerMap');
+        const mainMapElement = document.getElementById('locationMap');
+        const pickerMapElement = document.getElementById('locationPickerMap');
         const searchInput = document.getElementById('locationSearchInput');
-        if (!mapElement || !searchInput) return;
-
-        this.locationPickerMap = new google.maps.Map(mapElement, {
-            zoom: 15,
-            center: { lat: 11.0168, lng: 76.9558 } // Default to Coimbatore
-        });
-
-        // Initialize the location service
-        if (window.locationService) {
-            window.locationService.init();
-        }
-
-        // Initialize Places Autocomplete on the search input
-        if (window.locationService) {
-            this.locationSearchBox = window.locationService.initAutocomplete(
-                searchInput,
-                { types: ['geocode'] },
-                (place) => {
-                    // When a place is selected, update the map and marker
-                    if (place.geometry && place.geometry.location) {
-                        this.locationPickerMap.setCenter(place.geometry.location);
-                        this.setLocationMarker(place.geometry.location);
-                        this.selectedAddress = place.formatted_address;
-                    }
-                }
-            );
-        } else {
-            // Fallback if locationService is not available
-            this.locationSearchBox = new google.maps.places.SearchBox(searchInput);
-            this.locationSearchBox.addListener('places_changed', () => {
-                const places = this.locationSearchBox.getPlaces();
-                if (places.length === 0) return;
-                
-                const place = places[0];
-                if (!place.geometry || !place.geometry.location) return;
-                
-                // Update map and marker
-                this.locationPickerMap.setCenter(place.geometry.location);
-                this.setLocationMarker(place.geometry.location);
-                this.selectedAddress = place.formatted_address;
+        
+        // Initialize main map if element exists
+        if (mainMapElement) {
+            this.locationMap = new google.maps.Map(mainMapElement, {
+                zoom: 15,
+                center: { lat: 11.0168, lng: 76.9558 }, // Default to Coimbatore
+                mapTypeControl: false,
+                streetViewControl: false
             });
         }
 
-        // Add click listener to set location
-        this.locationPickerMap.addListener('click', (e) => {
-            this.setLocationMarker(e.latLng);
-            
-            // Get address for the clicked location
-            if (window.locationService) {
-                window.locationService.getAddressFromCoordinates(e.latLng)
-                    .then(result => {
-                        if (result && result.formatted_address) {
-                            this.selectedAddress = result.formatted_address;
-                            if (searchInput) {
-                                searchInput.value = result.formatted_address;
-                            }
-                        }
-                    })
-                    .catch(error => console.error('Error getting address:', error));
+        // Initialize picker map if element exists
+        if (pickerMapElement) {
+            this.locationPickerMap = new google.maps.Map(pickerMapElement, {
+                zoom: 15,
+                center: { lat: 11.0168, lng: 76.9558 },
+                mapTypeControl: false,
+                streetViewControl: false
+            });
+
+            // Initialize search box for the picker map
+            if (searchInput) {
+                const searchBox = new google.maps.places.SearchBox(searchInput);
+                this.locationPickerMap.controls[google.maps.ControlPosition.TOP_LEFT].push(searchInput);
+
+                // Bias the SearchBox results towards current map's viewport
+                this.locationPickerMap.addListener('bounds_changed', () => {
+                    searchBox.setBounds(this.locationPickerMap.getBounds());
+                });
+
+                // Listen for the event fired when the user selects a prediction
+                searchBox.addListener('places_changed', () => {
+                    const places = searchBox.getPlaces();
+                    if (places.length === 0) return;
+
+                    const place = places[0];
+                    if (!place.geometry || !place.geometry.location) return;
+
+                    // Center map and add marker
+                    this.locationPickerMap.setCenter(place.geometry.location);
+                    this.setLocationMarker(place.geometry.location);
+                    this.selectedAddress = place.formatted_address;
+                });
             }
-        });
-        
-        // Try to get user's current location
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const pos = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    };
-                    this.locationPickerMap.setCenter(pos);
-                    this.setLocationMarker(pos);
+        }
+
+        // Try to get user's current location for initial position
+        if (window.locationService) {
+            window.locationService.getCurrentLocation({ requestPermission: true, highAccuracy: true })
+                .then(position => {
+                    const latLng = new google.maps.LatLng(position.lat, position.lng);
                     
-                    // Get address for the current location
-                    if (window.locationService) {
-                        window.locationService.getAddressFromCoordinates(pos)
-                            .then(result => {
-                                if (result && result.formatted_address) {
-                                    this.selectedAddress = result.formatted_address;
-                                    if (searchInput) {
-                                        searchInput.value = result.formatted_address;
-                                    }
-                                }
-                            })
-                            .catch(error => console.error('Error getting address:', error));
+                    // Update both maps if they exist
+                    if (this.locationMap) {
+                        this.locationMap.setCenter(latLng);
+                        this.setLocationMarker(latLng, this.locationMap);
                     }
-                },
-                () => {
-                    console.log('Error: The Geolocation service failed.');
-                }
-            );
+                    if (this.locationPickerMap) {
+                        this.locationPickerMap.setCenter(latLng);
+                        this.setLocationMarker(latLng, this.locationPickerMap);
+                    }
+                    
+                    // Get and display address
+                    window.locationService.getAddressFromCoordinates(latLng)
+                        .then(result => {
+                            if (result && result.formatted_address) {
+                                this.selectedAddress = result.formatted_address;
+                                if (searchInput) {
+                                    searchInput.value = result.formatted_address;
+                                }
+                                const displayElement = document.getElementById('selectedLocationDisplay');
+                                if (displayElement) {
+                                    displayElement.textContent = result.formatted_address;
+                                }
+                            }
+                        });
+                })
+                .catch(error => {
+                    console.warn('Error getting initial location:', error);
+                    // Show location permission request if needed
+                    document.querySelector('.location-permission-info')?.style.display = 'block';
+                });
         }
     }
 
