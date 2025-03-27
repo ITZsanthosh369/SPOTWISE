@@ -205,7 +205,7 @@
                         localStorage.setItem('userId', payload.user.id);
                         
                         // Redirect to index.html (fixed path - removed leading slash)
-                        window.location.href = 'index.html';
+                        window.location.href = '/SPOTWISE/public/index.html';
                     } else {
                         // Display error message from JSON response
                         showLoginError(data.message || 'Login failed. Please check your credentials.');
@@ -266,7 +266,7 @@
                             localStorage.setItem('userId', payload.user.id);
                             
                             // Redirect to index.html for both user types
-                            window.location.href = 'index.html';
+                            window.location.href = '/SPOTWISE/index.html';
                         } else {
                             // Registration successful but no auto-login
                             showSuccessMessage('Registration successful! Please login with your new account.');
