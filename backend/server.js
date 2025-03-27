@@ -13,7 +13,7 @@ app.use(express.json());
 
 const allowedOrigins = [
     'http://127.0.0.1:5501', // Local frontend
-    'https://your-vercel-frontend-domain.vercel.app' // Vercel frontend
+    'https://spotwise.vercel.app', // Deployed frontend
 ];
 
 app.use(cors({
@@ -23,7 +23,8 @@ app.use(cors({
         } else {
             callback(new Error('Not allowed by CORS'));
         }
-    }
+    },
+    credentials: true, // Allow cookies if needed
 }));
 
 // Connect to MongoDB
