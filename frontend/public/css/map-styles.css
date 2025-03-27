@@ -371,3 +371,96 @@
         left: 120px;
     }
 }
+
+/* Location tracking styles */
+.follow-button {
+    position: absolute;
+    left: 10px;
+    bottom: 120px;
+    background-color: white;
+    padding: 8px;
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    z-index: 1;
+}
+
+.follow-button.active {
+    background-color: #4285F4;
+    color: white;
+}
+
+.accuracy-info {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+.tracking-toggle-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+/* Provider marker freshness styles */
+.provider-fresh {
+    border-left: 3px solid #28a745;
+}
+
+.provider-recent {
+    border-left: 3px solid #ffc107;
+}
+
+.provider-stale {
+    border-left: 3px solid #dc3545;
+}
+
+/* Animate markers when moving */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.pulse-marker {
+    animation: pulse 1s ease-in-out;
+}
+
+/* Updated location accuracy display */
+.accuracy-bubble {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.accuracy-high {
+    background-color: #28a745; /* Green for high accuracy */
+}
+
+.accuracy-medium {
+    background-color: #ffc107; /* Yellow for medium accuracy */
+}
+
+.accuracy-low {
+    background-color: #dc3545; /* Red for low accuracy */
+}

@@ -213,19 +213,33 @@
             <form id="profileForm">
               <!-- Basic Information -->
               <div class="form-group">
-                <label for="userName">Username</label>
-                <input type="text" class="form-control" id="userName" name="userName" required>
+                <label for="userName">
+                  Username
+                  <span class="required-indicator">*</span>
+                </label>
+                <input type="text" class="form-control" id="userName" name="userName" required aria-describedby="usernameHelp">
+                <small id="usernameHelp" class="form-text text-muted">This will be visible to other users</small>
+                <div class="invalid-feedback">Please enter a username</div>
               </div>
               
               <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" class="form-control" id="email" name="email" disabled>
+                <input type="email" class="form-control" id="email" name="email" disabled aria-describedby="emailHelp">
+                <small id="emailHelp" class="form-text text-muted">Email address cannot be changed</small>
               </div>
               
               <div class="form-group">
-                <label for="contactNumber">Contact Number</label>
-                <input type="text" class="form-control" id="contactNumber" name="contactNumber" 
-                       pattern="[0-9]{10}" title="Please enter a 10-digit number" required>
+                <label for="contactNumber">
+                  Contact Number
+                  <span class="required-indicator">*</span>
+                </label>
+                <div class="input-with-icon">
+                  <input type="text" class="form-control" id="contactNumber" name="contactNumber" 
+                         pattern="[0-9]{10}" title="Please enter a 10-digit number" required aria-describedby="phoneHelp">
+                  <i class="fa fa-phone"></i>
+                </div>
+                <small id="phoneHelp" class="form-text text-muted">Enter a 10-digit phone number without spaces or dashes</small>
+                <div class="invalid-feedback">Please enter a valid 10-digit phone number</div>
               </div>
               
               <!-- Address Section -->
@@ -234,27 +248,27 @@
                 <div class="row">
                   <div class="col-md-12">
                     <label for="street">Street</label>
-                    <input type="text" class="form-control" id="street" name="street">
+                    <input type="text" class="form-control" id="street" name="street" aria-label="Street address">
                   </div>
                 </div>
                 <div class="row mt-2">
                   <div class="col-md-6">
                     <label for="city">City</label>
-                    <input type="text" class="form-control" id="city" name="city">
+                    <input type="text" class="form-control" id="city" name="city" aria-label="City">
                   </div>
                   <div class="col-md-6">
                     <label for="state">State</label>
-                    <input type="text" class="form-control" id="state" name="state">
+                    <input type="text" class="form-control" id="state" name="state" aria-label="State">
                   </div>
                 </div>
                 <div class="row mt-2">
                   <div class="col-md-6">
                     <label for="postalCode">Postal Code</label>
-                    <input type="text" class="form-control" id="postalCode" name="postalCode">
+                    <input type="text" class="form-control" id="postalCode" name="postalCode" aria-label="Postal code">
                   </div>
                   <div class="col-md-6">
                     <label for="country">Country</label>
-                    <input type="text" class="form-control" id="country" name="country">
+                    <input type="text" class="form-control" id="country" name="country" aria-label="Country">
                   </div>
                 </div>
               </div>

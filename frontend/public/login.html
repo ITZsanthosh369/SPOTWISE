@@ -27,25 +27,34 @@
 
         <!----------------------------- Form box ----------------------------------->
         <div class="form-box">
+            <!-- Skip link for keyboard navigation -->
+            <a href="#loginForm" class="skip-to-content">Skip to login form</a>
 
             <!------------------- login form -------------------------->
 
             <div class="login-container" id="login">
                 <div class="top">
-                    <span>Don't have an account? <a href="#" onclick="register()">Sign Up</a></span>
+                    <span>Don't have an account? <a href="#" onclick="register()" class="interactive-element">Sign Up</a></span>
                     <header>Login</header>
                 </div>
-                <form id="loginForm">
-                    <div class="input-box">
-                        <input type="text" class="input-field" placeholder="Email" name="email" required>
+                <form id="loginForm" class="validate-form">
+                    <div class="input-box input-with-icon">
+                        <input type="email" class="input-field animate-focus" placeholder="Email" name="email" required 
+                               aria-label="Email address" aria-required="true">
                         <i class="bx bx-user"></i>
+                        <div class="invalid-feedback">Please enter a valid email address</div>
                     </div>
-                    <div class="input-box">
-                        <input type="password" class="input-field" placeholder="Password" name="password" required>
+                    <div class="input-box input-with-icon">
+                        <input type="password" class="input-field animate-focus" placeholder="Password" name="password" required
+                               aria-label="Password" aria-required="true">
                         <i class="bx bx-lock-alt"></i>
+                        <div class="invalid-feedback">Please enter your password</div>
                     </div>
                     <div class="input-box">
-                        <input type="submit" class="submit" value="Sign In">
+                        <button type="submit" class="submit interactive-element" id="loginButton">
+                            <span class="btn-text">Sign In</span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
                     </div>
                     <div class="two-col">
                         <div class="one">
@@ -53,7 +62,7 @@
                             <label for="login-check"> Remember Me</label>
                         </div>
                         <div class="two">
-                            <label><a href="#">Forgot password?</a></label>
+                            <label><a href="#" class="interactive-element">Forgot password?</a></label>
                         </div>
                     </div>
                 </form>
@@ -62,24 +71,31 @@
             <!-- Registration form -->
             <div class="register-container" id="register">
                 <div class="top">
-                    <span>Have an account? <a href="#" onclick="login()">Login</a></span>
+                    <span>Have an account? <a href="#" onclick="login()" class="interactive-element">Login</a></span>
                     <header>Sign Up</header>
                 </div>
-                <form id="registerForm">
-                    <div class="input-box">
-                        <input type="text" class="input-field" placeholder="Username" name="userName" required>
+                <form id="registerForm" class="validate-form">
+                    <div class="input-box input-with-icon">
+                        <input type="text" class="input-field animate-focus" placeholder="Username" name="userName" required
+                               aria-label="Username" aria-required="true">
                         <i class="bx bx-user"></i>
+                        <div class="invalid-feedback">Please enter a username</div>
                     </div>
-                    <div class="input-box">
-                        <input type="text" class="input-field" placeholder="Email" name="email" required>
+                    <div class="input-box input-with-icon">
+                        <input type="email" class="input-field animate-focus" placeholder="Email" name="email" required
+                               aria-label="Email address" aria-required="true">
                         <i class="bx bx-envelope"></i>
+                        <div class="invalid-feedback">Please enter a valid email address</div>
                     </div>
-                    <div class="input-box">
-                        <input type="password" class="input-field" placeholder="Password" name="password" required>
+                    <div class="input-box input-with-icon">
+                        <input type="password" class="input-field animate-focus" placeholder="Password" name="password" required
+                               aria-label="Password" aria-required="true" minlength="8">
                         <i class="bx bx-lock-alt"></i>
+                        <div class="invalid-feedback">Password must be at least 8 characters</div>
                     </div>
                     <div class="input-box">
-                        <select class="input-field select-field" name="role" required>
+                        <select class="input-field select-field animate-focus" name="role" required
+                               aria-label="Select your role" aria-required="true">
                             <option value="seeker">Seeker</option>
                             <option value="provider">Provider</option>
                         </select>

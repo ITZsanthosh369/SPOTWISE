@@ -6,6 +6,13 @@ class MapService {
         this.bounds = new google.maps.LatLngBounds();
         this.infoWindows = new Map(); // Store info windows for each marker
         this.isInitialized = false;
+        this.providerMarkers = new Map(); // Separate collection for provider markers
+        this.providerUpdateTime = new Map(); // Track when providers were last updated
+        this.accuracyCircle = null; // Circle showing location accuracy
+        this.followMode = false; // Whether to keep map centered on user location
+        this.markerClusterer = null; // For clustering provider markers
+        this.staleTimeout = 5 * 60 * 1000; // 5 minutes until a marker is considered stale
+        this.animationSpeed = 500; // Animation duration in ms
     }
 
     // Initialize map
@@ -275,36 +282,58 @@ class MapService {
         }
         
         try {
-            if (this.currentLocationMarker) {
-                this.currentLocationMarker.setMap(null);
-            }
-
-            this.currentLocationMarker = new google.maps.Marker({
-                position: position,
-                map: this.map,
-                icon: {
-                    url: 'images/current-location.png', // Add this icon to your images folder
-                    scaledSize: new google.maps.Size(30, 30)
-                },
-                title: 'Your Location',
-                zIndex: 1000 // Keep above other markers
-            });
-
-            // Add info window for current location
-            const infoWindow = new google.maps.InfoWindow({
-                content: '<div><strong>Your Location</strong></div>'
-            });
+            const hasExistingMarker = !!this.currentLocationMarker;
+            const latLng = position instanceof google.maps.LatLng ? 
+                position : new google.maps.LatLng(position.lat, position.lng);
             
-            this.infoWindows.set('currentLocation', infoWindow);
+            // If marker exists, animate to new position
+            if (hasExistingMarker) {
+                this._animateMarkerMove(this.currentLocationMarker, 
+                    this.currentLocationMarker.getPosition(), latLng);
+            } else {
+                // Create new marker if it doesn't exist
+                this.currentLocationMarker = new google.maps.Marker({
+                    position: latLng,
+                    map: this.map,
+                    icon: {
+                        url: 'images/current-location.jpeg',
+                        scaledSize: new google.maps.Size(30, 30)
+                    },
+                    title: 'Your Location',
+                    zIndex: 1000, // Keep above other markers
+                    optimized: false // Better animation performance for frequent updates
+                });
 
-            this.currentLocationMarker.addListener('click', () => {
-                // Close any other open info windows
-                this.infoWindows.forEach((window, key) => {
-                    if (key !== 'currentLocation') window.close();
+                // Add info window for current location
+                const infoWindow = new google.maps.InfoWindow({
+                    content: '<div><strong>Your Location</strong></div>'
                 });
                 
-                infoWindow.open(this.map, this.currentLocationMarker);
-            });
+                this.infoWindows.set('currentLocation', infoWindow);
+
+                this.currentLocationMarker.addListener('click', () => {
+                    // Close any other open info windows
+                    this.infoWindows.forEach((window, key) => {
+                        if (key !== 'currentLocation') window.close();
+                    });
+                    
+                    infoWindow.open(this.map, this.currentLocationMarker);
+                });
+            }
+
+            // Update accuracy circle if we have accuracy data
+            if (position.coords && position.coords.accuracy) {
+                this.showAccuracyCircle(latLng, position.coords.accuracy);
+            } else if (this.accuracyCircle) {
+                // Remove accuracy circle if no accuracy info
+                this.accuracyCircle.setMap(null);
+                this.accuracyCircle = null;
+            }
+
+            // If follow mode is enabled, center map on user location
+            if (this.followMode) {
+                this.map.panTo(latLng);
+            }
             
             return this.currentLocationMarker;
         } catch (error) {
@@ -313,17 +342,65 @@ class MapService {
         }
     }
 
+    /**
+     * Show accuracy circle around current location
+     * @param {google.maps.LatLng} position - The center position
+     * @param {number} accuracy - Accuracy in meters
+     */
+    showAccuracyCircle(position, accuracy) {
+        if (!this.isInitialized || !this.map) return;
+        
+        try {
+            if (this.accuracyCircle) {
+                // Update existing circle
+                this.accuracyCircle.setCenter(position);
+                this.accuracyCircle.setRadius(accuracy);
+            } else {
+                // Create new circle
+                this.accuracyCircle = new google.maps.Circle({
+                    strokeColor: "#4285F4",
+                    strokeOpacity: 0.5,
+                    strokeWeight: 1,
+                    fillColor: "#4285F4",
+                    fillOpacity: 0.15,
+                    map: this.map,
+                    center: position,
+                    radius: accuracy,
+                    clickable: false,
+                    zIndex: 1 // Below markers
+                });
+            }
+        } catch (error) {
+            console.error('Error showing accuracy circle:', error);
+        }
+    }
+
+    /**
+     * Toggle follow mode - keeps map centered on user location
+     * @param {boolean} enabled - Whether follow mode is enabled
+     */
+    setFollowMode(enabled) {
+        this.followMode = enabled;
+        
+        // If enabled and we have a current location, center on it
+        if (enabled && this.currentLocationMarker) {
+            this.map.panTo(this.currentLocationMarker.getPosition());
+        }
+        
+        return this.followMode;
+    }
+
     // Add or update provider marker
     updateProviderMarker(providerId, position, details) {
         if (!this.isInitialized || !this.map) {
             console.error('Map not initialized. Cannot update provider marker.');
-            return;
+            return false;
         }
         
         try {
             if (!providerId) {
                 console.error('Provider ID is required');
-                return;
+                return false;
             }
             
             if (!position || typeof position.lat !== 'function' && (position.lat === undefined || position.lng === undefined)) {
@@ -333,7 +410,7 @@ class MapService {
                 if (position && typeof position.lat === 'number') {
                     position = new google.maps.LatLng(position.lat, position.lng);
                 } else {
-                    return;
+                    return false;
                 }
             }
             
@@ -343,16 +420,40 @@ class MapService {
                 service: 'General Service',
                 rating: '4.5'
             };
+            
+            // Record last update time
+            this.providerUpdateTime.set(providerId, Date.now());
 
-            if (this.markers.has(providerId)) {
+            const isCurrentUser = providerId === localStorage.getItem('userId');
+
+            // Check if marker already exists
+            if (this.providerMarkers.has(providerId)) {
                 // Update existing marker position
-                const marker = this.markers.get(providerId);
-                marker.setPosition(position);
+                const marker = this.providerMarkers.get(providerId);
+                
+                // Animate marker movement if it's not your marker or if it's your marker but not in follow mode
+                if (!isCurrentUser || !this.followMode) {
+                    this._animateMarkerMove(marker, marker.getPosition(), position);
+                } else {
+                    marker.setPosition(position);
+                }
                 
                 // Update info window content if available
                 const infoWindow = this.infoWindows.get(providerId);
                 if (infoWindow) {
                     infoWindow.setContent(this.createProviderInfoContent(providerId, details));
+                }
+                
+                // Remove stale class if it exists
+                if (marker.getIcon() && marker.getIcon().url) {
+                    const iconUrl = marker.getIcon().url;
+                    if (iconUrl.includes('-stale')) {
+                        const freshIconUrl = iconUrl.replace('-stale', '');
+                        marker.setIcon({
+                            url: freshIconUrl,
+                            scaledSize: new google.maps.Size(40, 40)
+                        });
+                    }
                 }
             } else {
                 // Create new marker
@@ -360,11 +461,14 @@ class MapService {
                     position: position,
                     map: this.map,
                     icon: {
-                        url: 'images/provider-marker.png', // Add this icon to your images folder
+                        url: isCurrentUser ? 
+                            'images/my-location-marker.png' : 'images/provider-marker.png',
                         scaledSize: new google.maps.Size(40, 40)
                     },
                     title: details.name,
-                    animation: google.maps.Animation.DROP
+                    animation: google.maps.Animation.DROP,
+                    zIndex: isCurrentUser ? 1000 : 100, // Keep own marker on top
+                    optimized: false // Better animation performance for frequent updates
                 });
 
                 // Add info window for provider
@@ -381,8 +485,15 @@ class MapService {
                     infoWindow.open(this.map, marker);
                 });
 
+                // Store markers in both collections
+                this.providerMarkers.set(providerId, marker);
                 this.markers.set(providerId, marker);
                 this.infoWindows.set(providerId, infoWindow);
+                
+                // Add to cluster if we're using clustering
+                if (this.markerClusterer) {
+                    this.markerClusterer.addMarker(marker);
+                }
             }
 
             this.updateBounds();
@@ -393,16 +504,114 @@ class MapService {
         }
     }
     
-    // Create HTML content for provider info window
+    // Clear all provider markers except current user
+    clearProviderMarkers() {
+        try {
+            const currentUserId = localStorage.getItem('userId');
+            
+            this.providerMarkers.forEach((marker, id) => {
+                if (id !== currentUserId) {
+                    marker.setMap(null);
+                    
+                    // Close info window if open
+                    if (this.infoWindows.has(id)) {
+                        this.infoWindows.get(id).close();
+                    }
+                    
+                    // Remove from both collections
+                    this.providerMarkers.delete(id);
+                    this.markers.delete(id);
+                    this.infoWindows.delete(id);
+                    this.providerUpdateTime.delete(id);
+                    
+                    // Remove from clusterer if it exists
+                    if (this.markerClusterer) {
+                        this.markerClusterer.removeMarker(marker);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error clearing provider markers:', error);
+        }
+    }
+    
+    // Create HTML content for provider info window with enhanced info and freshness
     createProviderInfoContent(providerId, details) {
+        const isCurrentUser = providerId === localStorage.getItem('userId');
+        const lastUpdate = this.providerUpdateTime.get(providerId);
+        let timeDisplay = '';
+        
+        if (lastUpdate && !isCurrentUser) {
+            const now = Date.now();
+            const diff = now - lastUpdate;
+            
+            if (diff < 60000) { // Less than a minute
+                timeDisplay = '<span class="text-success">Updated just now</span>';
+            } else if (diff < 300000) { // Less than 5 minutes
+                const minutes = Math.floor(diff / 60000);
+                timeDisplay = `<span class="text-success">Updated ${minutes} min${minutes > 1 ? 's' : ''} ago</span>`;
+            } else if (diff < 3600000) { // Less than an hour
+                const minutes = Math.floor(diff / 60000);
+                timeDisplay = `<span class="text-warning">Updated ${minutes} mins ago</span>`;
+            } else { // More than an hour
+                const hours = Math.floor(diff / 3600000);
+                timeDisplay = `<span class="text-danger">Updated ${hours} hour${hours > 1 ? 's' : ''} ago</span>`;
+            }
+        }
+        
+        // Additional info for distance if provided
+        const distanceInfo = details.distance ? 
+            `<p><i class="fa fa-map-marker"></i> ${details.distance}</p>` : '';
+            
         return `
             <div class="provider-info">
-                <h3>${details.name}</h3>
-                <p>Service: ${details.service}</p>
-                <p>Rating: ${details.rating} ⭐</p>
-                <button class="map-action-btn" onclick="requestService('${providerId}')">Request Service</button>
+                <h3>${details.name}${isCurrentUser ? ' <span class="badge badge-primary">You</span>' : ''}</h3>
+                <p><strong>Service:</strong> ${details.service}</p>
+                <p><strong>Rating:</strong> ${details.rating} ⭐</p>
+                ${distanceInfo}
+                ${timeDisplay ? `<p class="text-muted small">${timeDisplay}</p>` : ''}
+                ${!isCurrentUser ? `<button class="map-action-btn btn btn-sm btn-primary" onclick="requestService('${providerId}')">Request Service</button>` : ''}
             </div>
         `;
+    }
+
+    /**
+     * Check for stale markers and update their appearance
+     */
+    checkStaleMarkers() {
+        const now = Date.now();
+        
+        this.providerMarkers.forEach((marker, id) => {
+            const lastUpdate = this.providerUpdateTime.get(id);
+            const isCurrentUser = id === localStorage.getItem('userId');
+            
+            // Skip current user marker
+            if (isCurrentUser) return;
+            
+            if (lastUpdate && now - lastUpdate > this.staleTimeout) {
+                // Marker is stale, update its appearance
+                const icon = marker.getIcon();
+                if (icon && icon.url && !icon.url.includes('-stale')) {
+                    const staleIconUrl = icon.url.replace('.png', '-stale.png');
+                    marker.setIcon({
+                        url: staleIconUrl,
+                        scaledSize: new google.maps.Size(40, 40)
+                    });
+                    
+                    // Update info window to show stale status
+                    const infoWindow = this.infoWindows.get(id);
+                    if (infoWindow) {
+                        // Get existing details to recreate content
+                        const title = marker.getTitle();
+                        infoWindow.setContent(this.createProviderInfoContent(id, {
+                            name: title,
+                            service: 'Service Provider',
+                            rating: '4.5'
+                        }));
+                    }
+                }
+            }
+        });
     }
 
     // Add service request marker
@@ -552,8 +761,28 @@ class MapService {
         if (!this.isInitialized || !this.map) return;
         
         try {
+            // Convert position to LatLng if needed
+            if (typeof position.lat === 'number') {
+                position = new google.maps.LatLng(position.lat, position.lng);
+            }
+            
+            // Temporarily disable follow mode if explicitly panning
+            const wasFollowMode = this.followMode;
+            this.followMode = false;
+            
+            // Pan with animation
             this.map.panTo(position);
-            this.map.setZoom(zoom);
+            
+            if (zoom !== this.map.getZoom()) {
+                this.map.setZoom(zoom);
+            }
+            
+            // Restore follow mode after a short delay if it was enabled
+            if (wasFollowMode) {
+                setTimeout(() => {
+                    this.followMode = wasFollowMode;
+                }, 3000);
+            }
         } catch (error) {
             console.error('Error panning map:', error);
         }
@@ -585,6 +814,104 @@ class MapService {
         }
     }
 
+    /**
+     * Initialize marker clustering for provider markers
+     */
+    initMarkerClustering() {
+        if (!this.isInitialized || !window.MarkerClusterer) return;
+        
+        try {
+            // Convert providerMarkers to array for clustering
+            const markers = Array.from(this.providerMarkers.values());
+            
+            this.markerClusterer = new MarkerClusterer(this.map, markers, {
+                imagePath: 'images/m',
+                gridSize: 50,
+                minimumClusterSize: 3,
+                maxZoom: 15
+            });
+        } catch (error) {
+            console.error('Error initializing marker clustering:', error);
+        }
+    }
+
+    /**
+     * Animate marker movement from one position to another
+     * @param {google.maps.Marker} marker - The marker to animate
+     * @param {google.maps.LatLng} current - Current position
+     * @param {google.maps.LatLng} destination - Destination position
+     * @private
+     */
+    _animateMarkerMove(marker, current, destination) {
+        if (!marker || !current || !destination) return;
+        
+        // If current and destination are the same, no need to animate
+        if (current.equals(destination)) return;
+
+        // Make sure we have proper LatLng objects
+        if (typeof current.lat !== 'function') {
+            current = new google.maps.LatLng(current.lat, current.lng);
+        }
+        if (typeof destination.lat !== 'function') {
+            destination = new google.maps.LatLng(destination.lat, destination.lng);
+        }
+        
+        // Don't animate if the distance is too large (teleport instead)
+        const distance = this._haversineDistance(
+            { lat: current.lat(), lng: current.lng() },
+            { lat: destination.lat(), lng: destination.lng() }
+        );
+        
+        if (distance > 5) { // More than 5km, just teleport
+            marker.setPosition(destination);
+            return;
+        }
+        
+        // Calculate animation frames for smoother movement for close distances
+        const frames = Math.min(Math.ceil(distance * 10), 100);
+        const animationSpeed = distance < 0.1 ? 200 : this.animationSpeed;
+        const deltaLat = (destination.lat() - current.lat()) / frames;
+        const deltaLng = (destination.lng() - current.lng()) / frames;
+        
+        let frame = 0;
+        
+        const animate = () => {
+            if (frame < frames) {
+                frame++;
+                
+                const lat = current.lat() + deltaLat * frame;
+                const lng = current.lng() + deltaLng * frame;
+                
+                marker.setPosition(new google.maps.LatLng(lat, lng));
+                
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        animate();
+    }
+    
+    /**
+     * Calculate the haversine distance between two points
+     * @param {Object} p1 - First point {lat, lng}
+     * @param {Object} p2 - Second point {lat, lng}
+     * @returns {number} - Distance in kilometers
+     * @private
+     */
+    _haversineDistance(p1, p2) {
+        const R = 6371; // Earth radius in kilometers
+        const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+        const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+        
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
     // Custom map styles
     getMapStyles() {
         return [
@@ -605,6 +932,13 @@ class MapService {
         ];
     }
 }
+
+// Start checking for stale markers every minute
+setInterval(() => {
+    if (window.mapService && window.mapService.checkStaleMarkers) {
+        window.mapService.checkStaleMarkers();
+    }
+}, 60000);
 
 // Export the service
 window.mapService = new MapService();
