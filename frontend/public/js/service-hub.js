@@ -21,7 +21,7 @@ const SpotWiseServiceHub = (function() {
     // Define the backend API base URL
     const API_BASE_URL = window.location.hostname === 'localhost'
         ? 'http://localhost:3000'
-        : 'https://backend-itzsanthosh369s-projects.vercel.app';
+        : 'https://backend-green-zeta-69.vercel.app';
     
     // Module object to hold public methods and properties
     const module = {};
